@@ -86,7 +86,7 @@ if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=api_key)
 
 # Modelo principal recomendado para producción
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-3.5-flash-lite"
 
 # Inicializar sesión de chat si no existe
 if "chat" not in st.session_state:

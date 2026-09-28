@@ -1,50 +1,27 @@
-"""
-Probador del Agente de NotCo (Nota) — versión Python / línea de comandos,
-usando modelos Gemini (Google) en vez de Claude.
-
-El prompt y el catálogo siguen viviendo en archivos aparte, no en este script:
-    prompt.txt          -> el prompt del Agente, con un marcador {CATALOGO_TABLE}
-                            donde se inserta la tabla de productos.
-    catalogo_notco.csv  -> el catálogo, con columnas:
-                            sku,producto,categoria,formato,precio_clp,stock,activo
-
-Requisitos:
-    pip install google-genai
-
-Variable de entorno necesaria:
-    GEMINI_API_KEY   (tu API key de Google AI Studio / Gemini)
-
-Uso (parado en la carpeta donde están prompt.txt y catalogo_notco.csv):
-    python "notco.py" --chat
-    python "notco.py" --battery
-    python "notco.py" --battery --prompt otro_prompt.txt --catalogo otro_catalogo.csv
-"""
-
 import argparse
 import csv
 import os
-import streamlit as st
 import sys
+import time
 
 try:
     from google import genai
     from google.genai import types
+    from google.genai.errors import APIError
 except Exception as e:
-    st.error(f"Error al importar el SDK de Google GenAI: {e}")
-    st.info("Asegúrate de que 'google-genai' esté escrito correctamente en tu archivo requirements.txt")
-    st.stop()
+    print(f"Error al importar el SDK de Google GenAI: {e}")
+    print("Asegúrate de haber instalado 'google-genai': pip install google-genai")
+    sys.exit(1)
 
-# Modelo Gemini a usar. "gemini-3-flash-preview" es el modelo Flash actual de
-# la familia Gemini 3 (rápido y barato); si prefieres más calidad de
-# razonamiento a costa de velocidad, cambia a "gemini-3.1-pro-preview".
-MODEL = "gemini-3.8-flash"
+# Modelo Gemini corregido
+MODEL = "gemini-3.5-flash-lite"
 
 DEFAULT_PROMPT_FILE = "prompt.txt"
 DEFAULT_CATALOGO_FILE = "catalogo_notco.csv"
 CATALOGO_PLACEHOLDER = "{CATALOGO_TABLE}"
 
 # ---------------------------------------------------------------------------
-# Batería de 8 mensajes de prueba (mismos que mensajes_prueba.md)
+# Batería de 8 mensajes de prueba
 # ---------------------------------------------------------------------------
 TEST_CASES = [
     {
@@ -109,8 +86,7 @@ def format_activo(raw):
 
 
 def build_catalog_table(csv_path):
-    """Lee el CSV del catálogo y arma la tabla en formato markdown que el
-    prompt espera (misma estructura que usa el prompt base de Versu)."""
+    """Lee el CSV del catálogo y arma la tabla en formato markdown."""
     with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
@@ -143,15 +119,23 @@ def load_system_prompt(prompt_path, catalogo_path):
 
     return prompt_text
 
-def ask(client, system_prompt, user_message):
-    """Un solo turno, sin historial (para la batería: cada caso es
-    independiente)."""
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=user_message,
-        config=types.GenerateContentConfig(system_instruction=system_prompt),
-    )
-    return response.text
+
+def ask(client, system_prompt, user_message, max_retries=3):
+    """Un solo turno con manejo de reintentos para evitar errores 503 temporales."""
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=user_message,
+                config=types.GenerateContentConfig(system_instruction=system_prompt),
+            )
+            return response.text
+        except APIError as e:
+            if "503" in str(e) and attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+                continue
+            raise e
+
 
 def run_battery(client, system_prompt):
     print(f"\nCorriendo los {len(TEST_CASES)} casos contra el modelo {MODEL}...\n")
@@ -169,8 +153,6 @@ def run_battery(client, system_prompt):
 
 def chat_loop(client, system_prompt):
     print("Conversando con Nota. Escribe 'salir' para terminar.\n")
-    # El SDK de Gemini mantiene el historial dentro del objeto chat: no hay
-    # que armar la lista de turnos a mano en cada mensaje.
     chat = client.chats.create(
         model=MODEL,
         config=types.GenerateContentConfig(system_instruction=system_prompt),
@@ -182,8 +164,20 @@ def chat_loop(client, system_prompt):
             break
         if not user_input or user_input.lower() in ("salir", "exit", "quit"):
             break
-        respuesta = chat.send_message(user_input)
-        print(f"Nota: {respuesta.text}\n")
+        
+        # Manejo de reintentos por si hay picos de demanda
+        for attempt in range(3):
+            try:
+                respuesta = chat.send_message(user_input)
+                print(f"Nota: {respuesta.text}\n")
+                break
+            except APIError as e:
+                if "503" in str(e) and attempt < 2:
+                    print("Servidor ocupado, reintentando...")
+                    time.sleep(2)
+                    continue
+                print(f"Error de comunicación con Gemini: {e}\n")
+                break
 
 
 def main():
@@ -191,9 +185,9 @@ def main():
     parser.add_argument("--chat", action="store_true", help="conversar con Nota interactivamente")
     parser.add_argument("--battery", action="store_true", help="correr la batería de 8 mensajes de prueba")
     parser.add_argument("--prompt", type=str, default=DEFAULT_PROMPT_FILE,
-                         help=f"ruta al archivo del prompt (por defecto: {DEFAULT_PROMPT_FILE})")
+                        help=f"ruta al archivo del prompt (por defecto: {DEFAULT_PROMPT_FILE})")
     parser.add_argument("--catalogo", type=str, default=DEFAULT_CATALOGO_FILE,
-                         help=f"ruta al CSV del catálogo (por defecto: {DEFAULT_CATALOGO_FILE})")
+                        help=f"ruta al CSV del catálogo (por defecto: {DEFAULT_CATALOGO_FILE})")
     args = parser.parse_args()
 
     api_key = os.environ.get("GEMINI_API_KEY")
