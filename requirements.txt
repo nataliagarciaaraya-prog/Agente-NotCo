@@ -1,3 +1,4 @@
 pandas
 openpyxl
+google-genai
 streamlit==1.64.0
