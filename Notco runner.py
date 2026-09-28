@@ -15,7 +15,7 @@ except Exception as e:
     st.stop()
 
 # Modelo Gemini
-MODEL = "gemini-3.1-flash-lite"
+MODEL = "gemini-2.5-flash"
 DEFAULT_PROMPT_FILE = "prompt.txt"
 DEFAULT_CATALOGO_FILE = "catalogo_notco.csv"
 CATALOGO_PLACEHOLDER = "{CATALOGO_TABLE}"
