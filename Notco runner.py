@@ -1,5 +1,6 @@
 import csv
 import os
+import time
 import streamlit as st
 
 # Configuración inicial de la página
@@ -14,8 +15,8 @@ except Exception as e:
     st.info("Asegúrate de que 'google-genai' esté escrito correctamente en tu archivo requirements.txt")
     st.stop()
 
-# Modelo Gemini
-MODEL = "gemini-2.0-flash"
+# Lista de modelos priorizados (si el primero está saturado, prueba el siguiente)
+MODELS_TO_TRY = ["gemini-3.8-flash", "gemini-1.5-flash"]
 DEFAULT_PROMPT_FILE = "prompt.txt"
 DEFAULT_CATALOGO_FILE = "catalogo_notco.csv"
 CATALOGO_PLACEHOLDER = "{CATALOGO_TABLE}"
@@ -81,15 +82,20 @@ if not os.path.exists(DEFAULT_PROMPT_FILE) or not os.path.exists(DEFAULT_CATALOG
 # Cargar System Prompt
 system_prompt = load_system_prompt(DEFAULT_PROMPT_FILE, DEFAULT_CATALOGO_FILE)
 
-# Inicializar Cliente de Gemini y Chat en Session State
+# Inicializar Cliente de Gemini
 if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=api_key)
 
-if "chat" not in st.session_state:
+# Función para inicializar o reiniciar la sesión de chat con un modelo específico
+def init_chat(model_name):
+    st.session_state.chat_model = model_name
     st.session_state.chat = st.session_state.client.chats.create(
-        model=MODEL,
+        model=model_name,
         config=types.GenerateContentConfig(system_instruction=system_prompt),
     )
+
+if "chat" not in st.session_state:
+    init_chat(MODELS_TO_TRY[0])
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -106,12 +112,35 @@ if prompt := st.chat_input("Escribe tu consulta a Nota..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Respuesta del agente
+    # Respuesta del agente con lógica de reintentos y fallback de modelos
     with st.chat_message("assistant"):
         with st.spinner("Nota está respondiendo..."):
-            try:
-                response = st.session_state.chat.send_message(prompt)
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"Error al generar respuesta: {e}")
+            response_text = None
+            
+            for model in MODELS_TO_TRY:
+                if st.session_state.get("chat_model") != model:
+                    init_chat(model)
+                
+                # Intentar hasta 3 veces por modelo si hay error 503 (sobredemanda)
+                success = False
+                for attempt in range(3):
+                    try:
+                        response = st.session_state.chat.send_message(prompt)
+                        response_text = response.text
+                        success = True
+                        break
+                    except Exception as e:
+                        err_msg = str(e)
+                        if ("503" in err_msg or "UNAVAILABLE" in err_msg) and attempt < 2:
+                            time.sleep(2 * (attempt + 1))  # Esperar 2s, luego 4s antes de reintentar
+                        else:
+                            break
+                
+                if success:
+                    break
+
+            if response_text:
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+            else:
+                st.error("Servidor ocupado temporalmente. Por favor, intenta enviar tu mensaje nuevamente en unos segundos.")
