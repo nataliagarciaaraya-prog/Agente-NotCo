@@ -1,0 +1,43 @@
+sku,producto,categoria,formato,precio_clp,stock,activo
+NM-ORI-1L,NotMilk Original,Bebidas vegetales,1 L,2450,84,si
+NM-ORI-12,NotMilk Original,Bebidas vegetales,Pack 12 x 1 L,26460,19,si
+NM-LOW-1L,NotMilk Low Fat,Bebidas vegetales,1 L,2450,66,si
+NM-LOW-12,NotMilk Low Fat,Bebidas vegetales,Pack 12 x 1 L,26460,12,si
+NM-ZER-12,NotMilk Zero Sugar,Bebidas vegetales,Pack 12 x 1 L,26460,7,si
+NM-CHO-1L,NotMilk Chocolate,Bebidas vegetales,1 L,2690,41,si
+NM-CHO-12,NotMilk Chocolate,Bebidas vegetales,Pack 12 x 1 L,28480,9,si
+NM-BAR-1L,NotMilk Barista,Bebidas vegetales,1 L,2490,73,si
+NM-BAR-12,NotMilk Barista,Bebidas vegetales,Pack 12 x 1 L,26460,15,si
+NM-VAI-12,NotMilk French Vanilla,Bebidas vegetales,Pack 12 x 1 L,28480,0,si
+NM-ALM-1L,NotMilk Almendra,Bebidas vegetales,1 L,2690,28,si
+NM-KID-200,NotMilk Chocolate Kids,Bebidas vegetales,200 ml,990,120,si
+NP-FUD-5,NotProtein Fudge Brownie,Barras de proteína,5 un x 45 g,6290,34,si
+NP-COO-5,NotProtein Cookies and Creams,Barras de proteína,5 un x 45 g,6290,22,si
+NP-COO-20,NotProtein Cookies and Creams,Barras de proteína,20 un x 30 g,19990,0,si
+NP-LEM-5,NotProtein Lemon Cake,Barras de proteína,5 un x 45 g,6290,17,si
+NP-LEM-20,NotProtein Lemon Cake,Barras de proteína,20 un x 30 g,19990,0,si
+NP-PEA-5,NotProtein Peanut Butter,Barras de proteína,5 un x 45 g,6290,26,si
+NP-MAN-5,NotProtein Mango Maracuyá,Barras de proteína,5 un x 45 g,4718,0,si
+NP-CRC-30,NotProtein Crunchy Choco,Barras de proteína,30 g,4990,58,si
+NP-CRP-30,NotProtein Crunchy Peanut,Barras de proteína,30 g,4990,49,si
+NS-PEA-5,NotSquare Peanut Butter,Barras,5 un x 30 g,4718,0,si
+NS-PEA-12,NotSquare Peanut Butter,Barras,12 un x 30 g,14590,11,si
+NS-CHC-5,NotSquare Choco Coco,Barras,5 un x 30 g,4718,0,si
+NS-CHC-12,NotSquare Choco Coco,Barras,12 un x 30 g,14590,8,si
+NS-TEN-5,NotSquare Choco Tentación,Barras,5 un x 30 g,4718,0,si
+NSH-CAF-24,NotShake Café Caramelo,Bebidas de proteína,24 x 250 ml,30396,6,si
+NB-095,NotBurger,Hamburguesas,95 g,1590,140,si
+NB-150,NotBurger,Hamburguesas,150 g,,62,si
+NC-BUR-95,NotChicken Burger Crispy,Pollo vegetal,95 g,,44,si
+NC-NUG-300,NotChicken Nuggets,Pollo vegetal,300 g,,37,si
+NC-NUF-300,NotChicken Nuggets Flamin Hot,Pollo vegetal,300 g,,0,si
+NC-MIL-110,NotChicken Mila,Pollo vegetal,110 g,,53,si
+NH-250,NotHotdog,Vienesas,250 g,3990,48,si
+NH-500,NotHotdog,Vienesas,500 g,,21,si
+NMA-ORI-315,NotMayo Original,Salsas,315 g,,77,si
+NMA-SPE-315,NotMayo Special Sauce,Salsas,315 g,,30,si
+NMA-DOR-315,NotMayo Doritos,Salsas,315 g,,0,si
+NCR-200,NotCream,Cremas,200 g,,25,si
+NIC-VAI,NotIceCream Vainilla,Helados,473 ml,,0,no
+NIC-CHO,NotIceCream Chocolate,Helados,473 ml,,14,si
+NCH-400,NotChori,Embutidos,400 g,,19,si
