@@ -23,14 +23,16 @@ Uso (parado en la carpeta donde están prompt.txt y catalogo_notco.csv):
 import argparse
 import csv
 import os
+import streamlit as st
 import sys
 
 try:
     from google import genai
     from google.genai import types
-except ImportError:
-    print("Falta instalar el SDK: pip install google-genai")
-    sys.exit(1)
+except Exception as e:
+    st.error(f"Error al importar el SDK de Google GenAI: {e}")
+    st.info("Asegúrate de que 'google-genai' esté escrito correctamente en tu archivo requirements.txt")
+    st.stop()
 
 # Modelo Gemini a usar. "gemini-3-flash-preview" es el modelo Flash actual de
 # la familia Gemini 3 (rápido y barato); si prefieres más calidad de
