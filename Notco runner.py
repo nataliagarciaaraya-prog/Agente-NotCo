@@ -81,11 +81,20 @@ if not os.path.exists(DEFAULT_PROMPT_FILE) or not os.path.exists(DEFAULT_CATALOG
 # Cargar System Prompt
 system_prompt = load_system_prompt(DEFAULT_PROMPT_FILE, DEFAULT_CATALOGO_FILE)
 
-# Inicializar Cliente de Gemini
+# Inicializar cliente si no existe
 if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=api_key)
 
-# Inicializar Historial
+# Modelo principal recomendado para producción
+MODEL_NAME = "gemini-1.5-flash"
+
+# Inicializar sesión de chat si no existe
+if "chat" not in st.session_state:
+    st.session_state.chat = st.session_state.client.chats.create(
+        model=MODEL_NAME,
+        config=types.GenerateContentConfig(system_instruction=system_prompt),
+    )
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -94,7 +103,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# UN SOLO chat_input en todo el script
+# Entrada de texto del usuario
 if prompt := st.chat_input("Escribe tu consulta a Nota..."):
     # Guardar y mostrar mensaje del usuario
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -104,38 +113,15 @@ if prompt := st.chat_input("Escribe tu consulta a Nota..."):
     # Generar respuesta
     with st.chat_message("assistant"):
         with st.spinner("Nota está respondiendo..."):
-            response_text = None
-            
-            # Intentar generar contenido directamente con el cliente
-            # (evita acumular estados de chat desactualizados)
-            models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash"]
-            
-            # Construir historial para la llamada
-            contents = [{"role": "user" if m["role"] == "user" else "model", "parts": [{"text": m["content"]}]} for m in st.session_state.messages]
-            
-            for model_name in models_to_try:
-                try:
-                    for attempt in range(2):
-                        try:
-                            res = st.session_state.client.models.generate_content(
-                                model=model_name,
-                                contents=contents,
-                                config=types.GenerateContentConfig(system_instruction=system_prompt)
-                            )
-                            response_text = res.text
-                            break
-                        except Exception as e:
-                            if ("503" in str(e) or "UNAVAILABLE" in str(e)) and attempt == 0:
-                                time.sleep(1.5)
-                            else:
-                                raise e
-                    if response_text:
-                        break
-                except Exception:
-                    continue
-
-            if response_text:
-                st.markdown(response_text)
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-            else:
-                st.error("Los servidores de la API están con alta demanda en este momento. Por favor, intenta de nuevo en unos segundos.")
+            try:
+                # Envío directo al chat gestionado por la librería
+                response = st.session_state.chat.send_message(prompt)
+                
+                if response and response.text:
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                else:
+                    st.error("La API no devolvió contenido en la respuesta.")
+            except Exception as e:
+                # Mostramos el error real devuelto por Google para diagnosticar de inmediato
+                st.error(f"Detalle del error devuelto por la API: {e}")
