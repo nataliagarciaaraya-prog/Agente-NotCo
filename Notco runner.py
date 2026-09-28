@@ -82,23 +82,83 @@ if not os.path.exists(DEFAULT_PROMPT_FILE) or not os.path.exists(DEFAULT_CATALOG
 # Cargar System Prompt
 system_prompt = load_system_prompt(DEFAULT_PROMPT_FILE, DEFAULT_CATALOGO_FILE)
 
+import time
+from google.genai import errors
+
+# ... (Mantiene tu código de lectura de prompt y catálogo) ...
+
+# 1. Definir lista de modelos de producción estables
+# Si uno no responde por sobredemanda, la app prueba con el siguiente automáticamente
+AVAILABLE_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"]
+
 # Inicializar Cliente de Gemini
 if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=api_key)
 
-# Función para inicializar o reiniciar la sesión de chat con un modelo específico
-def init_chat(model_name):
-    st.session_state.chat_model = model_name
+# Función para forzar la creación limpia de un Chat
+def create_new_chat(model_name):
+    st.session_state.current_model = model_name
     st.session_state.chat = st.session_state.client.chats.create(
         model=model_name,
         config=types.GenerateContentConfig(system_instruction=system_prompt),
     )
 
-if "chat" not in st.session_state:
-    init_chat(MODELS_TO_TRY[0])
+# Si no hay chat o el modelo guardado no está en la lista válida, creamos uno nuevo
+if "chat" not in st.session_state or "current_model" not in st.session_state:
+    create_new_chat(AVAILABLE_MODELS[0])
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Mostrar historial de mensajes
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Entrada de texto del usuario
+if prompt := st.chat_input("Escribe tu consulta a Nota..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Respuesta del agente
+    with st.chat_message("assistant"):
+        with st.spinner("Nota está respondiendo..."):
+            response_text = None
+            
+            # Recorrer modelos si el servidor de uno está ocupado (503)
+            for model in AVAILABLE_MODELS:
+                try:
+                    # Si necesitamos cambiar de modelo en la sesión, re-inicializamos
+                    if st.session_state.current_model != model:
+                        create_new_chat(model)
+                    
+                    # Intentar envío con 2 reintentos rápidos por modelo
+                    for attempt in range(2):
+                        try:
+                            res = st.session_state.chat.send_message(prompt)
+                            response_text = res.text
+                            break
+                        except Exception as inner_e:
+                            if ("503" in str(inner_e) or "UNAVAILABLE" in str(inner_e)) and attempt == 0:
+                                time.sleep(1.5)  # Breve pausa antes de reintentar
+                            else:
+                                raise inner_e
+
+                    if response_text:
+                        break  # Si obtuvimos respuesta exitosa, salimos del bucle principal
+
+                except Exception as model_err:
+                    # Si falla este modelo, el bucle intentará automáticamente con el siguiente de la lista
+                    continue
+
+            # Mostrar respuesta o error final
+            if response_text:
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+            else:
+                st.error("Los servidores de la API están experimentando alta demanda en este momento. Por favor, intenta tu consulta nuevamente en unos segundos.")
+
 
 # Mostrar historial de mensajes en pantalla
 for message in st.session_state.messages:

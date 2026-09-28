@@ -37,7 +37,7 @@ except Exception as e:
 # Modelo Gemini a usar. "gemini-3-flash-preview" es el modelo Flash actual de
 # la familia Gemini 3 (rápido y barato); si prefieres más calidad de
 # razonamiento a costa de velocidad, cambia a "gemini-3.1-pro-preview".
-MODEL = "gemini-3.1-flash-lite"
+MODEL = "gemini-3.8-flash"
 
 DEFAULT_PROMPT_FILE = "prompt.txt"
 DEFAULT_CATALOGO_FILE = "catalogo_notco.csv"
